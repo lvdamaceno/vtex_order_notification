@@ -20,5 +20,5 @@ def save_data():
 
 if __name__ == "__main__":
     save_data()
-    # query_db("SELECT COUNT(orderID) FROM orders ORDER BY orderId DESC;")
-    # query_db("SELECT * FROM orders ORDER BY orderId DESC;")
+    query_db("SELECT COUNT(orderID) FROM orders ORDER BY orderId DESC;")
+    query_db("SELECT * FROM orders ORDER BY orderId DESC;")

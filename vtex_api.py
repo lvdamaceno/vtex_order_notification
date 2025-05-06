@@ -27,3 +27,4 @@ def consumir_api_vtex():
     except requests.exceptions.RequestException as e:
         print(f"Ocorreu um erro: {e}")
         return None
+
