@@ -3,7 +3,7 @@ from datetime import datetime
 
 from notification import enviar_notificacao_telegram
 from vtex_api import consumir_api_vtex
-from vtex_db import create_table, update_or_insert_order, query_db
+from vtex_db import create_table, update_or_insert_order, query_db, exec_db
 
 logging.basicConfig(
     level=logging.INFO,  # ou DEBUG se quiser mais detalhes
@@ -35,3 +35,9 @@ if __name__ == "__main__":
     save_data()
     query_db("SELECT COUNT(orderID) FROM orders ORDER BY orderId DESC;")
     query_db("SELECT * FROM orders ORDER BY orderId DESC;")
+
+    # exec_db(
+    #     "UPDATE orders SET statusDescription = ? WHERE orderId = ?;",
+    #     ('cancel', '1531920503129-01')
+    # )
+

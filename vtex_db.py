@@ -52,66 +52,40 @@ def update_or_insert_order(order):
     is_any_delivered = convert_delivery_status(order['isAnyDelivered'])
 
     if existing_order:
-        # Verificar se o pedido teve alterações
+        campos_para_verificar = [
+            ("statusDescription", existing_order[5], order['statusDescription']),
+            ("isAllDelivered", existing_order[7], is_all_delivered),
+            ("isAnyDelivered", existing_order[8], is_any_delivered),
+        ]
+
         changes = []
-        update_query = "UPDATE orders SET"
         update_values = []
+        set_clauses = []
 
-        # Verificar se houve alterações nos dados
-        if existing_order[1] != order['creationDate']:
-            changes.append("creationDate")
-            update_query += " creationDate = ?,"
-            update_values.append(order['creationDate'])
+        for campo, valor_antigo, valor_novo in campos_para_verificar:
+            if valor_antigo != valor_novo:
+                changes.append(campo)
+                set_clauses.append(f"{campo} = ?")
+                update_values.append(valor_novo)
 
-        if existing_order[2] != order['clientName']:
-            changes.append("clientName")
-            update_query += " clientName = ?,"
-            update_values.append(order['clientName'])
-
-        if abs(existing_order[3] - (order['totalValue'] * 0.01)) > 0.01:
-            changes.append("totalValue")
-            update_query += " totalValue = ?,"
-            update_values.append(order['totalValue'] * 0.01)
-
-        if existing_order[4] != order['paymentNames']:
-            changes.append("paymentNames")
-            update_query += " paymentNames = ?,"
-            update_values.append(order['paymentNames'])
-
-        if existing_order[5] != order['statusDescription']:
-            changes.append("statusDescription")
-            update_query += " statusDescription = ?,"
-            update_values.append(order['statusDescription'])
-
-        if existing_order[6] != order['sequence']:
-            changes.append("sequence")
-            update_query += " sequence = ?,"
-            update_values.append(order['sequence'])
-
-        if existing_order[7] != is_all_delivered:
-            changes.append("isAllDelivered")
-            update_query += " isAllDelivered = ?,"
-            update_values.append(is_all_delivered)
-
-        if existing_order[8] != is_any_delivered:
-            changes.append("isAnyDelivered")
-            update_query += " isAnyDelivered = ?,"
-            update_values.append(is_any_delivered)
-
-        # Se houveram mudanças, finalize a query
         if changes:
-            update_query = update_query.rstrip(",")  # Remove a vírgula extra
-            update_query += " WHERE orderId = ?"
+            update_query = f"UPDATE orders SET {', '.join(set_clauses)} WHERE orderId = ?"
             update_values.append(order['orderId'])
 
             cursor.execute(update_query, update_values)
             db.commit()
+
             logging.info(f"Pedido {order['orderId']} atualizado: {', '.join(changes)}")
-            updateorder = update_order(order['orderId'], order['creationDate'], order['clientName'],
-                                    order['totalValue'], order['statusDescription'], {', '.join(changes)})
+
+            updateorder = update_order(
+                order['orderId'],
+                order['creationDate'],
+                order['clientName'],
+                order['totalValue'],
+                order['statusDescription'],
+                ', '.join(changes)
+            )
             enviar_notificacao_telegram(updateorder)
-        # else:
-        #     print(f"Pedido {order['orderId']} não teve alterações reais.")
     else:
         # Inserir novo pedido no banco
         query = """INSERT INTO orders (
@@ -138,6 +112,7 @@ def update_or_insert_order(order):
                              order['totalValue'], order['statusDescription'])
         enviar_notificacao_telegram(neworder)
 
+
     cursor.close()
     db.close()
 
@@ -153,3 +128,22 @@ def query_db(query):
     logging.info(tabulate(dados, headers=colunas, tablefmt="grid"))
 
     conn.close()
+
+def exec_db(query: str, params: tuple = ()):
+    """
+    Executa uma query de escrita no banco de dados (UPDATE, INSERT, DELETE).
+
+    :param query: Comando SQL
+    :param params: Tupla de parâmetros (opcional)
+    """
+    conn = sqlite3.connect('vtex_orders.db')
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute(query, params)
+        conn.commit()
+        logging.info(f"✅ Query executada com sucesso: {query.strip()}")
+    except sqlite3.Error as e:
+        logging.error(f"❌ Erro ao executar a query: {e}")
+    finally:
+        conn.close()
