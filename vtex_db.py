@@ -1,7 +1,13 @@
+import logging
 import sqlite3
 from tabulate import tabulate
 from notification import enviar_notificacao_telegram, new_order, update_order
 
+
+logging.basicConfig(
+    level=logging.INFO,  # ou DEBUG se quiser mais detalhes
+    format="%(asctime)s - %(levelname)s - %(message)s"
+)
 
 def create_table():
     """Cria a tabela 'orders' no banco de dados, se não existir"""
@@ -100,7 +106,7 @@ def update_or_insert_order(order):
 
             cursor.execute(update_query, update_values)
             db.commit()
-            print(f"Pedido {order['orderId']} atualizado: {', '.join(changes)}")
+            logging.info(f"Pedido {order['orderId']} atualizado: {', '.join(changes)}")
             updateorder = update_order(order['orderId'], order['creationDate'], order['clientName'],
                                     order['totalValue'], order['statusDescription'], {', '.join(changes)})
             enviar_notificacao_telegram(updateorder)
@@ -127,7 +133,7 @@ def update_or_insert_order(order):
 
         cursor.execute(query, data)
         db.commit()
-        print(f"Pedido {order['orderId']} inserido.")
+        logging.info(f"Pedido {order['orderId']} inserido.")
         neworder = new_order(order['orderId'], order['creationDate'], order['clientName'],
                              order['totalValue'], order['statusDescription'])
         enviar_notificacao_telegram(neworder)
@@ -144,6 +150,6 @@ def query_db(query):
     dados = cursor.fetchall()
 
     colunas = [descricao[0] for descricao in cursor.description]
-    print(tabulate(dados, headers=colunas, tablefmt="grid"))
+    logging.info(tabulate(dados, headers=colunas, tablefmt="grid"))
 
     conn.close()

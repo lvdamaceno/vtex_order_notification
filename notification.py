@@ -1,3 +1,5 @@
+import logging
+
 import requests
 import os
 from dotenv import load_dotenv
@@ -5,6 +7,11 @@ from datetime import datetime, timezone, timedelta
 
 # Carregar variáveis de ambiente do arquivo .env
 load_dotenv()
+
+logging.basicConfig(
+    level=logging.INFO,  # ou DEBUG se quiser mais detalhes
+    format="%(asctime)s - %(levelname)s - %(message)s"
+)
 
 
 # Função para enviar notificação para o Telegram
@@ -23,11 +30,11 @@ def enviar_notificacao_telegram(mensagem):
     try:
         response = requests.post(url, data=payload)
         if response.status_code == 200:
-            print("Notificação enviada com sucesso!")
+            logging.info("Notificação enviada com sucesso!")
         else:
-            print(f"Falha ao enviar notificação: {response.status_code}")
+            logging.warning(f"Falha ao enviar notificação: {response.status_code}")
     except requests.exceptions.RequestException as e:
-        print(f"Ocorreu um erro: {e}")
+        logging.error(f"Ocorreu um erro: {e}")
 
 
 def converter_data_iso_para_br(data_iso):
@@ -55,8 +62,7 @@ def new_order(orderid, creationdate, clientname, totalvalue, statusdescription):
             f'Data: {converter_data_iso_para_br(creationdate)}\n '
             f'Cliente: {clientname}\n '
             f'Valor: {totalvalue * 0.01}\n '
-            f'Status: {statusdescription}\n '
-            f'-----------------------------------\n')
+            f'Status: {statusdescription}\n')
 
 
 def update_order(orderid, creationdate, clientname, totalvalue, statusdescription, field):
@@ -66,5 +72,4 @@ def update_order(orderid, creationdate, clientname, totalvalue, statusdescriptio
             f'Data: {converter_data_iso_para_br(creationdate)}\n '
             f'Cliente: {clientname}\n '
             f'Valor: {totalvalue * 0.01}\n '
-            f'Status: {statusdescription}\n '
-            f'-----------------------------------\n')
+            f'Status: {statusdescription}\n ')
