@@ -39,82 +39,91 @@ def convert_delivery_status(value):
 
 
 def update_or_insert_order(order):
-    """Atualiza ou insere um pedido no banco de dados"""
+    """Atualiza ou insere um pedido no banco de dados. Retorna (status, objeto_para_notificacao ou None)"""
+
     db = sqlite3.connect('vtex_orders.db')
     cursor = db.cursor()
 
-    # Verificar se o pedido já existe no banco
     cursor.execute("SELECT * FROM orders WHERE orderId = ?", (order['orderId'],))
     existing_order = cursor.fetchone()
 
-    # Convertendo status para "sim" ou "não"
     is_all_delivered = convert_delivery_status(order['isAllDelivered'])
     is_any_delivered = convert_delivery_status(order['isAnyDelivered'])
 
-    if existing_order:
-        campos_para_verificar = [
-            ("statusDescription", existing_order[5], order['statusDescription']),
-            ("isAllDelivered", existing_order[7], is_all_delivered),
-            ("isAnyDelivered", existing_order[8], is_any_delivered),
-        ]
+    try:
+        if existing_order:
+            campos_para_verificar = [
+                ("statusDescription", existing_order[5], order['statusDescription']),
+                ("isAllDelivered", existing_order[7], is_all_delivered),
+                ("isAnyDelivered", existing_order[8], is_any_delivered),
+            ]
 
-        changes = []
-        update_values = []
-        set_clauses = []
+            changes = []
+            update_values = []
+            set_clauses = []
 
-        for campo, valor_antigo, valor_novo in campos_para_verificar:
-            if valor_antigo != valor_novo:
-                changes.append(campo)
-                set_clauses.append(f"{campo} = ?")
-                update_values.append(valor_novo)
+            for campo, valor_antigo, valor_novo in campos_para_verificar:
+                if valor_antigo != valor_novo:
+                    changes.append(campo)
+                    set_clauses.append(f"{campo} = ?")
+                    update_values.append(valor_novo)
 
-        if changes:
-            update_query = f"UPDATE orders SET {', '.join(set_clauses)} WHERE orderId = ?"
-            update_values.append(order['orderId'])
+            if changes:
+                update_query = f"UPDATE orders SET {', '.join(set_clauses)} WHERE orderId = ?"
+                update_values.append(order['orderId'])
 
-            cursor.execute(update_query, update_values)
-            db.commit()
+                cursor.execute(update_query, update_values)
+                db.commit()
 
-            logging.info(f"Pedido {order['orderId']} atualizado: {', '.join(changes)}")
+                logging.info(f"Pedido {order['orderId']} atualizado: {', '.join(changes)}")
 
-            updateorder = update_order(
+                updateorder = update_order(
+                    order['orderId'],
+                    order['creationDate'],
+                    order['clientName'],
+                    order['totalValue'],
+                    order['statusDescription'],
+                    ', '.join(changes)
+                )
+                return "update", updateorder
+            else:
+                return "nochange", None
+        else:
+            query = """INSERT INTO orders (
+                orderId, creationDate, clientName, totalValue, paymentNames,
+                statusDescription, sequence, isAllDelivered, isAnyDelivered
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);"""
+
+            data = (
                 order['orderId'],
                 order['creationDate'],
                 order['clientName'],
                 order['totalValue'],
+                order['paymentNames'],
                 order['statusDescription'],
-                ', '.join(changes)
+                order['sequence'],
+                is_all_delivered,
+                is_any_delivered
             )
-            enviar_notificacao_telegram(updateorder)
-    else:
-        # Inserir novo pedido no banco
-        query = """INSERT INTO orders (
-            orderId, creationDate, clientName, totalValue, paymentNames,
-            statusDescription, sequence, isAllDelivered, isAnyDelivered
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);"""
 
-        data = (
-            order['orderId'],
-            order['creationDate'],
-            order['clientName'],
-            order['totalValue'],
-            order['paymentNames'],
-            order['statusDescription'],
-            order['sequence'],
-            is_all_delivered,
-            is_any_delivered
-        )
+            cursor.execute(query, data)
+            db.commit()
 
-        cursor.execute(query, data)
-        db.commit()
-        logging.info(f"Pedido {order['orderId']} inserido.")
-        neworder = new_order(order['orderId'], order['creationDate'], order['clientName'],
-                             order['totalValue'], order['statusDescription'])
-        enviar_notificacao_telegram(neworder)
+            logging.info(f"Pedido {order['orderId']} inserido.")
 
+            neworder = new_order(
+                order['orderId'],
+                order['creationDate'],
+                order['clientName'],
+                order['totalValue'],
+                order['statusDescription']
+            )
+            return "insert", neworder
 
-    cursor.close()
-    db.close()
+    finally:
+        cursor.close()
+        db.close()
+
 
 
 def query_db(query):

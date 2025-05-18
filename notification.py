@@ -73,3 +73,9 @@ def update_order(orderid, creationdate, clientname, totalvalue, statusdescriptio
             f'Cliente: {clientname}\n '
             f'Valor: {totalvalue * 0.01}\n '
             f'Status: {statusdescription}\n ')
+
+
+def notificar_pedido(acao, objeto_notificacao):
+    if acao in ("insert", "update") and objeto_notificacao:
+        enviar_notificacao_telegram(objeto_notificacao)
+
