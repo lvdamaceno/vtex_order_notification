@@ -58,22 +58,12 @@ def converter_data_iso_para_br(data_iso):
 
 
 def new_order(orderid, creationdate, clientname, totalvalue, statusdescription):
-    return (f'----------- Novo Pedido -----------\n '
+    return (f'----------- Pedido Pendente -----------\n '
             f'Pedido: {orderid}\n '
             f'Data: {converter_data_iso_para_br(creationdate)}\n '
             f'Cliente: {clientname}\n '
             f'Valor: {totalvalue * 0.01}\n '
             f'Status: {statusdescription}\n')
-
-
-def update_order(orderid, creationdate, clientname, totalvalue, statusdescription, field):
-    return (f'-------- Pedido Atualizado --------\n '
-            f'Campo Atualizado: {field}\n '
-            f'Pedido: {orderid}\n '
-            f'Data: {converter_data_iso_para_br(creationdate)}\n '
-            f'Cliente: {clientname}\n '
-            f'Valor: {totalvalue * 0.01}\n '
-            f'Status: {statusdescription}\n ')
 
 
 def notificar_pedido(acao, objeto_notificacao):

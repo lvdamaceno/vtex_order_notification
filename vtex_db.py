@@ -1,7 +1,7 @@
 import logging
 import sqlite3
 from tabulate import tabulate
-from notification import enviar_notificacao_telegram, new_order, update_order
+from notification import enviar_notificacao_telegram, new_order
 
 
 logging.basicConfig(

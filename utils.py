@@ -13,14 +13,13 @@ def mes_ano_tual():
     resp = f"{mes}/{ano}"
     return resp
 
-def formatar_relatorio_com_pre(hora_atual, inseridos, atualizados, nao_modificados, ignorados):
+def formatar_relatorio_com_pre(hora_atual, pendentes, faturados, cancelados):
     linhas = [
         f"Relatório de pedidos",
         f"{hora_atual} - {mes_ano_tual()}",
-        f"➤ Inseridos:     {inseridos}",
-        f"➤ Atualizados:   {atualizados}",
-        f"➤ Faturados:     {nao_modificados}",
-        f"➤ Cancelados:    {ignorados}"
+        f"➤ Pendentes:     {pendentes}",
+        f"➤ Faturados:     {faturados}",
+        f"➤ Cancelados:    {cancelados}"
     ]
 
     conteudo = "\n".join(linhas)

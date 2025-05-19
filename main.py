@@ -3,7 +3,7 @@ from datetime import datetime
 import pytz
 import os
 
-from notification import enviar_notificacao_telegram, notificar_pedido
+from notification import enviar_notificacao_telegram, notificar_pedido, new_order
 from utils import formatar_relatorio_com_pre
 from vtex_api import consumir_api_vtex
 from vtex_db import create_table, update_or_insert_order, query_db, exec_db
@@ -14,10 +14,6 @@ logging.basicConfig(
 )
 
 def save_data():
-
-    if not os.path.exists("vtex_orders.db"):
-        logging.warning("⚠️ Banco de dados ainda não existe (novo deploy ou ambiente reiniciado).")
-    """Salva ou atualiza os dados dos pedidos no banco de dados"""
     orders = consumir_api_vtex()
 
     fuso_br = pytz.timezone('America/Sao_Paulo')
@@ -27,43 +23,27 @@ def save_data():
         logging.info("🚫 Nenhum pedido retornado pela API.")
         return
 
-    # Criar tabela se não existir
-    create_table()
+    pendentes = sum(1 for pedido in orders if pedido["status"] not in ("invoiced", "canceled"))
+    faturados = sum(1 for pedido in orders if pedido["status"] == "invoiced")
+    cancelados = sum(1 for pedido in orders if pedido["status"] == "canceled")
 
-    # Contadores
-    inseridos = 0
-    atualizados = 0
-    nao_modificados = 0
-    ignorados = 0
+    if pendentes == 0:
+        enviar_notificacao_telegram("❌ Nenhum pedido pendente")
+        logging.info("❌ Nenhum pedido pendente")
 
-    for order in orders:
-        status = order['statusDescription'].lower()
-        if any(palavra in status for palavra in ['cancel']):
-            ignorados += 1
-            continue
+    for pedido in orders:
+        if pedido["status"] not in ("invoiced", "canceled"):
+            orderid = pedido["orderId"]
+            creationdate = pedido["creationDate"]
+            clientname = pedido["clientName"]
+            totalvalue = pedido["totalValue"]
+            statusdescription = pedido["statusDescription"]
+            enviar_notificacao_telegram(new_order(orderid, creationdate, clientname, totalvalue, statusdescription))
 
-        acao, objeto = update_or_insert_order(order)
-
-        if acao == "insert":
-            inseridos += 1
-            notificar_pedido(acao, objeto)
-        elif acao == "update":
-            atualizados += 1
-            notificar_pedido(acao, objeto)
-        elif acao == "nochange":
-            nao_modificados += 1
-
-    resumo = formatar_relatorio_com_pre(hora_atual, inseridos, atualizados, nao_modificados, ignorados)
+    resumo = formatar_relatorio_com_pre(hora_atual, pendentes, faturados, cancelados)
     logging.info(resumo)
     enviar_notificacao_telegram(resumo)
 
-
 if __name__ == "__main__":
-    # save_data()
-    # query_db("SELECT COUNT(orderID) FROM orders ORDER BY orderId DESC;")
-    query_db("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'orders';")
-    # exec_db(
-    #     "UPDATE orders SET statusDescription = ? WHERE orderId = ?;",
-    #     ('cancel', '1531920503129-01')
-    # )
+    save_data()
 
