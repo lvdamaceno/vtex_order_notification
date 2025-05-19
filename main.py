@@ -59,9 +59,9 @@ def save_data():
 
 
 if __name__ == "__main__":
-    save_data()
+    # save_data()
     # query_db("SELECT COUNT(orderID) FROM orders ORDER BY orderId DESC;")
-    # query_db("SELECT * FROM orders ORDER BY orderId DESC;")
+    query_db("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'orders';")
     # exec_db(
     #     "UPDATE orders SET statusDescription = ? WHERE orderId = ?;",
     #     ('cancel', '1531920503129-01')
