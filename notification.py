@@ -23,7 +23,8 @@ def enviar_notificacao_telegram(mensagem):
     # Dados a serem enviados
     payload = {
         'chat_id': chat_id,
-        'text': mensagem
+        'text': mensagem,
+        "parse_mode": "HTML"
     }
 
     # Enviar a requisição para o Telegram

@@ -2,6 +2,7 @@ import logging
 from datetime import datetime
 
 from notification import enviar_notificacao_telegram, notificar_pedido
+from utils import formatar_relatorio_com_pre
 from vtex_api import consumir_api_vtex
 from vtex_db import create_table, update_or_insert_order, query_db, exec_db
 
@@ -45,25 +46,15 @@ def save_data():
         elif acao == "nochange":
             nao_modificados += 1
 
-    # Resumo final
-    resumo = (
-        f"📝 Relatório de pedidos ({hora_atual}):\n"
-        f"🆕 Inseridos: {inseridos}\n"
-        f"✏️ Atualizados: {atualizados}\n"
-        f"🔍 Sem mudanças: {nao_modificados}\n"
-        f"🚫 Ignorados (cancelados): {ignorados}"
-    )
-
+    resumo = formatar_relatorio_com_pre(hora_atual, inseridos, atualizados, nao_modificados, ignorados)
     logging.info(resumo)
     enviar_notificacao_telegram(resumo)
 
 
-
 if __name__ == "__main__":
     save_data()
-    query_db("SELECT COUNT(orderID) FROM orders ORDER BY orderId DESC;")
-    query_db("SELECT * FROM orders ORDER BY orderId DESC;")
-
+    # query_db("SELECT COUNT(orderID) FROM orders ORDER BY orderId DESC;")
+    # query_db("SELECT * FROM orders ORDER BY orderId DESC;")
     # exec_db(
     #     "UPDATE orders SET statusDescription = ? WHERE orderId = ?;",
     #     ('cancel', '1531920503129-01')
