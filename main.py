@@ -30,6 +30,7 @@ def save_data():
     if pendentes == 0:
         enviar_notificacao_telegram("❌ Nenhum pedido pendente")
         logging.info("❌ Nenhum pedido pendente")
+        return
 
     for pedido in orders:
         if pedido["status"] not in ("invoiced", "canceled"):
@@ -39,6 +40,8 @@ def save_data():
             totalvalue = pedido["totalValue"]
             statusdescription = pedido["statusDescription"]
             enviar_notificacao_telegram(new_order(orderid, creationdate, clientname, totalvalue, statusdescription))
+
+
 
     resumo = formatar_relatorio_com_pre(hora_atual, pendentes, faturados, cancelados)
     logging.info(resumo)
