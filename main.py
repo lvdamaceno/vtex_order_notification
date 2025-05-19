@@ -1,6 +1,7 @@
 import logging
 from datetime import datetime
 import pytz
+import os
 
 from notification import enviar_notificacao_telegram, notificar_pedido
 from utils import formatar_relatorio_com_pre
@@ -13,6 +14,9 @@ logging.basicConfig(
 )
 
 def save_data():
+
+    if not os.path.exists("vtex_orders.db"):
+        logging.warning("⚠️ Banco de dados ainda não existe (novo deploy ou ambiente reiniciado).")
     """Salva ou atualiza os dados dos pedidos no banco de dados"""
     orders = consumir_api_vtex()
 
