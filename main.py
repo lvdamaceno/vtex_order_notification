@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime
+import pytz
 
 from notification import enviar_notificacao_telegram, notificar_pedido
 from utils import formatar_relatorio_com_pre
@@ -14,7 +15,9 @@ logging.basicConfig(
 def save_data():
     """Salva ou atualiza os dados dos pedidos no banco de dados"""
     orders = consumir_api_vtex()
-    hora_atual = datetime.now().strftime("%H:%M")
+
+    fuso_br = pytz.timezone('America/Sao_Paulo')
+    hora_atual = datetime.now(fuso_br).strftime("%H:%M")
 
     if not orders:
         logging.info("🚫 Nenhum pedido retornado pela API.")
