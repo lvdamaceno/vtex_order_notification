@@ -1,12 +1,11 @@
 import logging
 from datetime import datetime
 import pytz
-import os
 
-from notification import enviar_notificacao_telegram, notificar_pedido, new_order
+from notification import enviar_notificacao_telegram, new_order
 from utils import formatar_relatorio_com_pre
 from vtex_api import consumir_api_vtex
-from vtex_db import create_table, update_or_insert_order, query_db, exec_db
+
 
 logging.basicConfig(
     level=logging.INFO,  # ou DEBUG se quiser mais detalhes
@@ -23,6 +22,7 @@ def save_data():
         logging.info("🚫 Nenhum pedido retornado pela API.")
         return
 
+    # pendentes = 1
     pendentes = sum(1 for pedido in orders if pedido["status"] not in ("invoiced", "canceled"))
     faturados = sum(1 for pedido in orders if pedido["status"] == "invoiced")
     cancelados = sum(1 for pedido in orders if pedido["status"] == "canceled")
@@ -33,13 +33,17 @@ def save_data():
         return
 
     for pedido in orders:
+        # if pedido["status"] not in ("canceled"):
         if pedido["status"] not in ("invoiced", "canceled"):
             orderid = pedido["orderId"]
             creationdate = pedido["creationDate"]
             clientname = pedido["clientName"]
-            totalvalue = pedido["totalValue"]
+            valor_em_centavos = pedido["totalValue"] * 0.01
+            totalvalue = f"R$ {valor_em_centavos:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+            totalitems = pedido["totalItems"]
             statusdescription = pedido["statusDescription"]
-            enviar_notificacao_telegram(new_order(orderid, creationdate, clientname, totalvalue, statusdescription))
+
+            enviar_notificacao_telegram(new_order(orderid, creationdate, clientname, totalvalue, totalitems, statusdescription))
 
 
 

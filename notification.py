@@ -57,12 +57,13 @@ def converter_data_iso_para_br(data_iso):
     return dt_brasilia.strftime('%d/%m/%Y %H:%M:%S')
 
 
-def new_order(orderid, creationdate, clientname, totalvalue, statusdescription):
+def new_order(orderid, creationdate, clientname, totalvalue, totalitems, statusdescription):
     return (f'----------- Pedido Pendente -----------\n '
             f'Pedido: {orderid}\n '
             f'Data: {converter_data_iso_para_br(creationdate)}\n '
             f'Cliente: {clientname}\n '
-            f'Valor: {totalvalue * 0.01}\n '
+            f'Valor: {totalvalue}\n '
+            f'Quantidade: {totalitems}\n '
             f'Status: {statusdescription}\n')
 
 
