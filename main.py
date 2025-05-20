@@ -28,7 +28,7 @@ def save_data():
     cancelados = sum(1 for pedido in orders if pedido["status"] == "canceled")
 
     if pendentes == 0:
-        enviar_notificacao_telegram("❌ Nenhum pedido pendente")
+        enviar_notificacao_telegram("❌ Nenhum pedido pendente no VTEX")
         logging.info("❌ Nenhum pedido pendente")
         return
 
