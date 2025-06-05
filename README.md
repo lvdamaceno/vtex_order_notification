@@ -1,79 +1,135 @@
-# VTEX Order Notification Bot
+# 🛒 VTEX Order Notification Bot
 
-Este projeto consulta a API da VTEX OMS, analisa o status dos pedidos em tempo real, e envia notificações via Telegram com base nos dados recebidos — sem persistência local em banco de dados.
+Um sistema automatizado que consulta pedidos da plataforma VTEX e envia alertas via Telegram quando há pedidos pendentes de faturamento.
 
-## ✨ O que mudou?
+---
 
-- ✅ **Remoção do SQLite**: A aplicação agora **não depende mais de banco de dados local**.
-- 🔄 **Consulta contínua via API**: O estado dos pedidos é totalmente baseado na resposta da API VTEX.
-- 📬 **Notificações Telegram**: São enviadas para novos pedidos pendentes ou mudanças de status.
-- 📦 **Classificação de status**: Separação entre pedidos faturados, cancelados e pendentes diretamente na memória.
-- 🕒 **Relatórios por horário**: Geração de relatórios com hora atual no fuso de Brasília (UTC−3).
+## 🚀 Objetivo
 
-## 📁 Estrutura Atual do Projeto
+O projeto foi desenvolvido para empresas que utilizam a VTEX como plataforma de e-commerce e precisam de um monitoramento **em tempo real** dos pedidos que **ainda não foram faturados**.
 
-- `main.py`: Executa o controle principal, consulta a API e envia notificações.
-- `notification.py`: Contém a função de envio para o Telegram.
-- `vtex_api.py`: Requisições à API VTEX com paginação e filtros por data.
-- `.env`: Arquivo com variáveis de ambiente (não incluído no controle de versão).
+> Ao detectar pedidos com status pendente, o bot envia uma notificação para um grupo ou usuário específico no Telegram.
 
-## ⚙️ Dependências
+---
 
-- Python 3.8+
-- `requests`
-- `python-dotenv`
-- `tabulate` (opcional, para logs no terminal)
+## ⚙️ Tecnologias utilizadas
+
+- **Python 3.9**
+- [VTEX API](https://developers.vtex.com/docs/api)
+- [Telegram Bot API](https://core.telegram.org/bots/api)
+- `requests`, `dotenv`, `logging`
+- `pytest` para testes automatizados
+
+---
+
+## 🗂 Estrutura de Pastas
 
 ```bash
-pip install requests python-dotenv tabulate
+vetx_order_notification/
+├── main.py                          # Script principal de execução
+├── .env                             # Variáveis de ambiente (não subir no Git!)
+├── requirements.txt                 # Bibliotecas necessárias
+├── pytest.ini                       # Configuração do pytest
+├── render.yaml                      # Configuração para deploy na Render
+├── vtex/                            # Módulo com funções de integração com a VTEX
+│   ├── __init__.py
+│   └── vtex_api.py
+├── utils/                           # Funções auxiliares (horário, relatórios, etc.)
+│   ├── __init__.py
+│   └── utils.py
+├── notifications/                  # Módulo de notificações via Telegram
+│   ├── __init__.py
+│   └── telegram.py
+├── tests/                           # Testes automatizados
+│   ├── test_env_vars.py
+│   ├── test_api_vtex_real.py
+│   ├── test_telegram_real.py
+│   └── __init__.py
+└── logs/                            # (gerado em runtime) arquivos de log do dia
 ```
 
-## 🔧 Como usar
+---
 
-1. Clone o repositório:
+## ✅ O que o bot faz?
+
+1. Consulta a API da VTEX e coleta todos os pedidos do mês atual.
+2. Filtra pedidos com status diferente de "faturado" ou "cancelado".
+3. Envia mensagens personalizadas no Telegram com os dados do pedido.
+4. Gera e envia um resumo com o total de pedidos pendentes, faturados e cancelados.
+5. Exibe logs informativos no console (ou arquivo se configurado).
+
+---
+
+## 📦 Como usar
+
+### 1. Clone o repositório
+
 ```bash
-git clone https://github.com/seuusuario/vtex-order-tracker.git
+git clone https://github.com/seu-usuario/vetx_order_notification.git
+cd vetx_order_notification
 ```
 
-2. Crie um `.env` com:
+### 2. Crie um ambiente virtual
+
+```bash
+python3.9 -m venv venv
+source venv/bin/activate  # ou .\venv\Scripts\activate no Windows
+```
+
+### 3. Instale as dependências
+
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Configure o `.env`
+
+Crie um arquivo `.env` com:
 
 ```env
-URL="https://SEU_LOJA.vtexcommercestable.com.br/api/oms/pvt/orders"
-APPKEY="sua-appkey"
-APPTOKEN="seu-apptoken"
-BOTTOKEN="token_do_bot"
-CHATID="id_do_chat"
+URL=https://sualoja.vtexcommercestable.com.br/api/oms/pvt/orders
+APPKEY=sua_app_key
+APPTOKEN=seu_token
+BOTTOKEN=token_do_bot_telegram
+CHATID=id_do_chat_telegram
 ```
 
-3. Execute:
+### 5. Execute o bot
+
 ```bash
 python main.py
 ```
 
-## 🛠️ Funcionalidades
+---
 
-- Consulta pedidos do mês atual
-- Filtro por pedidos pendentes (`status` diferente de `invoiced` e `canceled`)
-- Agrupamento de pedidos por status
-- Envio individual ou em lote para Telegram
-- Uso de fuso horário brasileiro com `pytz` para marcar relatórios
+## 🧪 Testes
 
-## 🔔 Exemplo de notificação
+Execute todos os testes:
 
-```
------------ Novo Pedido -----------
-Pedido: 12345
-Data: 25/04/2025 15:30
-Cliente: João Silva
-Valor: R$ 150,00
-Status: Aguardando pagamento
------------------------------------
+```bash
+pytest -v
 ```
 
-## 🤝 Contribuição
+Execute somente testes que fazem requisições reais:
 
-1. Faça um fork
-2. Crie uma branch (`git checkout -b minha-feature`)
-3. Commit (`git commit -m 'feat: minha melhoria'`)
-4. Push (`git push origin minha-feature`)
-5. Abra um Pull Request 🚀
+```bash
+pytest -m realapi -v
+```
+
+---
+
+## 📤 Deploy (Render)
+
+Este projeto possui um arquivo `render.yaml` para deploy na plataforma [Render](https://render.com/), permitindo agendamento automático com `cron`.
+
+---
+
+## ✨ Futuras melhorias
+
+- Integração com outras plataformas (como Discord, WhatsApp API)
+
+---
+
+## 📄 Licença
+
+MIT © Vinicius Damaceno
