@@ -2,55 +2,82 @@ import logging
 from datetime import datetime
 import pytz
 
-from notification import enviar_notificacao_telegram, new_order
+from notifications.telegram import enviar_notificacao_telegram
+from notification import formatar_pedido_pendente
 from utils import formatar_relatorio_com_pre
 from vtex_api import consumir_api_vtex
 
-
+# Configuração de logging
 logging.basicConfig(
-    level=logging.INFO,  # ou DEBUG se quiser mais detalhes
+    level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
-def save_data():
-    orders = consumir_api_vtex()
 
+def obter_hora_atual() -> str:
+    """Retorna a hora atual no fuso horário de São Paulo."""
     fuso_br = pytz.timezone('America/Sao_Paulo')
-    hora_atual = datetime.now(fuso_br).strftime("%H:%M")
+    return datetime.now(fuso_br).strftime("%H:%M")
+
+
+def classificar_pedidos(orders: list) -> tuple:
+    """Classifica os pedidos em pendentes, faturados e cancelados."""
+    pendentes = [pedido for pedido in orders if pedido["status"] not in ("invoiced", "canceled")]
+    faturados = [pedido for pedido in orders if pedido["status"] == "invoiced"]
+    cancelados = [pedido for pedido in orders if pedido["status"] == "canceled"]
+    return pendentes, faturados, cancelados
+
+
+def notificar_pedidos_pendentes(pedidos: list) -> None:
+    """Envia notificação para cada pedido pendente."""
+    for pedido in pedidos:
+        try:
+            valor_em_centavos = pedido["totalValue"] * 0.01
+            totalvalue = f"R$ {valor_em_centavos:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+            mensagem = formatar_pedido_pendente(
+                pedido["orderId"],
+                pedido["creationDate"],
+                pedido["clientName"],
+                totalvalue,
+                pedido["totalItems"],
+                pedido["statusDescription"]
+            )
+            enviar_notificacao_telegram(mensagem)
+        except Exception as e:
+            logging.error(f"Erro ao notificar pedido {pedido.get('orderId', 'desconhecido')}: {e}")
+
+
+def verificar_pedidos_vtex():
+    """Função principal para verificar e notificar pedidos da VTEX."""
+    try:
+        orders = consumir_api_vtex()
+    except Exception as e:
+        logging.error(f"Erro ao consumir API VTEX: {e}")
+        enviar_notificacao_telegram("⚠️ Erro ao acessar a API da VTEX.")
+        return
+
+    hora_atual = obter_hora_atual()
 
     if not orders:
         logging.info("🚫 Nenhum pedido retornado pela API.")
         return
 
-    # pendentes = 1
-    pendentes = sum(1 for pedido in orders if pedido["status"] not in ("invoiced", "canceled"))
-    faturados = sum(1 for pedido in orders if pedido["status"] == "invoiced")
-    cancelados = sum(1 for pedido in orders if pedido["status"] == "canceled")
+    pendentes, faturados, cancelados = classificar_pedidos(orders)
 
-    if pendentes == 0:
+    if not pendentes:
+        logging.info("❌ Nenhum pedido pendente.")
         enviar_notificacao_telegram("❌ Nenhum pedido pendente no VTEX")
-        logging.info("❌ Nenhum pedido pendente")
         return
 
-    for pedido in orders:
-        # if pedido["status"] not in ("canceled"):
-        if pedido["status"] not in ("invoiced", "canceled"):
-            orderid = pedido["orderId"]
-            creationdate = pedido["creationDate"]
-            clientname = pedido["clientName"]
-            valor_em_centavos = pedido["totalValue"] * 0.01
-            totalvalue = f"R$ {valor_em_centavos:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-            totalitems = pedido["totalItems"]
-            statusdescription = pedido["statusDescription"]
+    notificar_pedidos_pendentes(pendentes)
 
-            enviar_notificacao_telegram(new_order(orderid, creationdate, clientname, totalvalue, totalitems, statusdescription))
+    try:
+        resumo = formatar_relatorio_com_pre(hora_atual, len(pendentes), len(faturados), len(cancelados))
+        logging.info(resumo)
+        enviar_notificacao_telegram(resumo)
+    except Exception as e:
+        logging.error(f"Erro ao formatar ou enviar resumo: {e}")
 
-
-
-    resumo = formatar_relatorio_com_pre(hora_atual, pendentes, faturados, cancelados)
-    logging.info(resumo)
-    enviar_notificacao_telegram(resumo)
 
 if __name__ == "__main__":
-    save_data()
-
+    verificar_pedidos_vtex()

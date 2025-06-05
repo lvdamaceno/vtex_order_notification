@@ -15,12 +15,12 @@ def mes_ano_tual():
 
 def formatar_relatorio_com_pre(hora_atual, pendentes, faturados, cancelados):
     linhas = [
-        f"Relatório de pedidos",
+        f"*📄 Relatório de pedidos*",
         f"{hora_atual} - {mes_ano_tual()}",
-        f"➤ Pendentes:     {pendentes}",
-        f"➤ Faturados:     {faturados}",
-        f"➤ Cancelados:    {cancelados}"
+        f"*• Pendentes:* `{pendentes}`",
+        f"*• Faturados:* `{faturados}`",
+        f"*• Cancelados:* `{cancelados}`"
     ]
 
     conteudo = "\n".join(linhas)
-    return f"<pre>{conteudo}</pre>"
+    return conteudo

@@ -1,73 +1,63 @@
 import logging
+import os
+from datetime import datetime, timezone, timedelta
+from typing import Optional
+from notifications.telegram import enviar_notificacao_telegram
 
 import requests
-import os
 from dotenv import load_dotenv
-from datetime import datetime, timezone, timedelta
 
-# Carregar variáveis de ambiente do arquivo .env
+# Carrega variáveis de ambiente
 load_dotenv()
 
+# Configuração do logger
 logging.basicConfig(
-    level=logging.INFO,  # ou DEBUG se quiser mais detalhes
+    level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
 
-# Função para enviar notificação para o Telegram
-def enviar_notificacao_telegram(mensagem):
-    token = os.getenv('BOTTOKEN')  # Seu Token do Bot
-    chat_id = os.getenv('CHATID')  # O chat_id do destinatário
-    url = f"https://api.telegram.org/bot{token}/sendMessage"
-
-    # Dados a serem enviados
-    payload = {
-        'chat_id': chat_id,
-        'text': mensagem,
-        "parse_mode": "HTML"
-    }
-
-    # Enviar a requisição para o Telegram
+def converter_data_iso_para_br(data_iso: str) -> str:
+    """Converte data em ISO 8601 para formato brasileiro com fuso de Brasília."""
     try:
-        response = requests.post(url, data=payload)
-        if response.status_code == 200:
-            logging.info("Notificação enviada com sucesso!")
+        if '+' in data_iso:
+            parte_data, parte_fuso = data_iso.split('+')
+            parte_data = parte_data[:26]  # até microssegundos
+            data_iso_corrigido = f"{parte_data}+{parte_fuso}"
         else:
-            logging.warning(f"Falha ao enviar notificação: {response.status_code}")
-    except requests.exceptions.RequestException as e:
-        logging.error(f"Ocorreu um erro: {e}")
+            data_iso_corrigido = data_iso
+
+        dt = datetime.fromisoformat(data_iso_corrigido)
+        dt_brasilia = dt.astimezone(timezone(timedelta(hours=-3)))
+        return dt_brasilia.strftime('%d/%m/%Y %H:%M:%S')
+
+    except Exception as e:
+        logging.error(f"❌ Erro ao converter data ISO '{data_iso}': {e}")
+        return "Data inválida"
 
 
-def converter_data_iso_para_br(data_iso):
-    # Remove excesso de zeros para ficar compatível com o fromisoformat
-    if '.' in data_iso:
-        parte_data, parte_fuso = data_iso.split('+')
-        parte_data = parte_data[:26]  # Cortar para até microssegundos (6 casas)
-        data_iso_corrigido = f"{parte_data}+{parte_fuso}"
-    else:
-        data_iso_corrigido = data_iso
-
-    # Converte a string ISO corrigida para datetime
-    dt = datetime.fromisoformat(data_iso_corrigido)
-
-    # Ajusta para horário de Brasília (UTC-3)
-    dt_brasilia = dt.astimezone(timezone(timedelta(hours=-3)))
-
-    # Formata para o padrão brasileiro
-    return dt_brasilia.strftime('%d/%m/%Y %H:%M:%S')
-
-
-def new_order(orderid, creationdate, clientname, totalvalue, totalitems, statusdescription):
-    return (f'----------- Pedido Pendente -----------\n '
-            f'Pedido: {orderid}\n '
-            f'Data: {converter_data_iso_para_br(creationdate)}\n '
-            f'Cliente: {clientname}\n '
-            f'Valor: {totalvalue}\n '
-            f'Quantidade: {totalitems}\n '
-            f'Status: {statusdescription}\n')
+def formatar_pedido_pendente(
+    orderid: str,
+    creationdate: str,
+    clientname: str,
+    totalvalue: str,
+    totalitems: int,
+    statusdescription: str
+) -> str:
+    """Formata uma mensagem de pedido pendente para envio via Telegram."""
+    data_formatada = converter_data_iso_para_br(creationdate)
+    return (
+        "----------- Pedido Pendente -----------\n"
+        f"Pedido: {orderid}\n"
+        f"Data: {data_formatada}\n"
+        f"Cliente: {clientname}\n"
+        f"Valor: {totalvalue}\n"
+        f"Quantidade: {totalitems}\n"
+        f"Status: {statusdescription}\n"
+    )
 
 
-def notificar_pedido(acao, objeto_notificacao):
+def notificar_pedido(acao: str, objeto_notificacao: Optional[str]) -> None:
+    """Envia uma notificação apenas se a ação for insert ou update e houver mensagem."""
     if acao in ("insert", "update") and objeto_notificacao:
         enviar_notificacao_telegram(objeto_notificacao)
-
