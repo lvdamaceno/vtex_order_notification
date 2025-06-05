@@ -1,16 +1,12 @@
 import logging
-
 import requests
 import os
 from dotenv import load_dotenv
 
+from utils.utils import formatar_pedido_pendente
+
 # Carregar variáveis de ambiente do arquivo .env
 load_dotenv()
-
-logging.basicConfig(
-    level=logging.INFO,  # ou DEBUG se quiser mais detalhes
-    format="%(asctime)s - %(levelname)s - %(message)s"
-)
 
 
 # Função para enviar notificação para o Telegram
@@ -41,3 +37,15 @@ def enviar_notificacao_telegram(mensagem):
         return None
 
 
+def notificar_pedidos_pendentes(pedidos: list) -> None:
+    """Envia notificação para cada pedido pendente."""
+    for pedido in pedidos:
+        try:
+            valor_em_centavos = pedido["totalValue"] * 0.01
+            totalvalue = f"R$ {valor_em_centavos:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+            pedido_data = [pedido["orderId"], pedido["creationDate"], pedido["clientName"], totalvalue,
+                           pedido["totalItems"], pedido["statusDescription"]]
+            mensagem = formatar_pedido_pendente(pedido_data)
+            enviar_notificacao_telegram(mensagem)
+        except Exception as e:
+            logging.error(f"Erro ao notificar pedido {pedido.get('orderId', 'desconhecido')}: {e}")

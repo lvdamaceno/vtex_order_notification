@@ -1,27 +1,13 @@
+import requests
 import logging
 import os
-from datetime import datetime
-from urllib.parse import quote
 from typing import List, Optional
-
 from dotenv import load_dotenv
-import requests
+from utils.utils import obter_intervalo_data_atual
 
 load_dotenv()
 
 VTEX_DATE_FORMAT = "%Y-%m-%dT%H:%M:%S.000Z"
-
-
-def obter_intervalo_data_atual() -> str:
-    """Retorna o intervalo do primeiro dia do mês até agora no formato da VTEX"""
-    hoje = datetime.utcnow()
-    primeiro_dia_mes = hoje.replace(day=1)
-
-    inicio = primeiro_dia_mes.strftime(VTEX_DATE_FORMAT)
-    fim = hoje.strftime(VTEX_DATE_FORMAT)
-
-    intervalo = f"creationDate:[{inicio} TO {fim}]"
-    return quote(intervalo)
 
 
 def construir_headers_vtex() -> dict:
@@ -39,7 +25,7 @@ def construir_url_base() -> str:
     base_url = os.getenv('URL')
     if not base_url:
         raise ValueError("URL da API VTEX não está definida no .env")
-    filtro_data = obter_intervalo_data_atual()
+    filtro_data = obter_intervalo_data_atual(VTEX_DATE_FORMAT)
     return f"{base_url}?per_page=100&f_creationDate={filtro_data}"
 
 

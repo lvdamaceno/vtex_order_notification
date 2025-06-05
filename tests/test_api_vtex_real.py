@@ -1,5 +1,4 @@
-import pytest
-from vtex_api import consumir_api_vtex
+from vtex.vtex_api import consumir_api_vtex
 
 
 def test_conexao_real_com_api_vtex():
